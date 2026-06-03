@@ -1,0 +1,14 @@
+node_modules
+dist
+coverage
+.DS_Store
+
+# transformers.js / onnxruntime model cache (downloaded at runtime)
+.cache
+.transformers-cache
+**/.cache/
+
+# editor / OS cruft
+*.log
+.idea
+.vscode

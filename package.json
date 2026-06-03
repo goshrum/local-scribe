@@ -1,0 +1,24 @@
+{
+  "name": "local-scribe",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "In-browser speech-to-text and subtitles. 100% on-device, no upload, no API key, free.",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "smoke": "node --test test/smoke/whisper.smoke.mjs"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^3.0.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4",
+    "vite": "^5.4.2",
+    "vitest": "^2.0.5"
+  }
+}
