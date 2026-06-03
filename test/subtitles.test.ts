@@ -3,6 +3,8 @@ import {
   toSrt,
   toVtt,
   toPlainText,
+  toJson,
+  toJsonObject,
   normalizeSegments,
 } from "../src/lib/subtitles.ts";
 import type { Segment } from "../src/lib/types.ts";
@@ -127,5 +129,48 @@ describe("toPlainText", () => {
   });
   it("returns empty string for no segments", () => {
     expect(toPlainText([])).toBe("");
+  });
+});
+
+describe("toJsonObject", () => {
+  it("produces a versioned object with normalized segments", () => {
+    const obj = toJsonObject(sample);
+    expect(obj.version).toBe(1);
+    expect(obj.segmentCount).toBe(3);
+    expect(obj.segments).toEqual([
+      { start: 0, end: 1.5, text: "Hello there." },
+      { start: 1.5, end: 3.25, text: "General Kenobi." },
+      { start: 3.25, end: 5, text: "You are a bold one." },
+    ]);
+  });
+
+  it("drops empty segments and keeps the count consistent", () => {
+    const obj = toJsonObject([
+      { start: 0, end: 1, text: "keep" },
+      { start: 1, end: 2, text: "   " },
+    ]);
+    expect(obj.segmentCount).toBe(1);
+    expect(obj.segments).toHaveLength(1);
+  });
+
+  it("handles no segments", () => {
+    expect(toJsonObject([])).toEqual({
+      version: 1,
+      segmentCount: 0,
+      segments: [],
+    });
+  });
+});
+
+describe("toJson", () => {
+  it("is valid JSON that round-trips to the same object", () => {
+    const str = toJson(sample);
+    expect(JSON.parse(str)).toEqual(toJsonObject(sample));
+  });
+
+  it("is pretty-printed and ends with a trailing newline", () => {
+    const str = toJson(sample);
+    expect(str.endsWith("\n")).toBe(true);
+    expect(str).toContain('\n  "version": 1');
   });
 });

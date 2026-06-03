@@ -73,3 +73,32 @@ export function toPlainText(segments: Segment[]): string {
     .map((s) => s.text)
     .join("\n");
 }
+
+/** Shape of the JSON transcript export. */
+export interface JsonExport {
+  /** Schema version, so downstream consumers can adapt to future changes. */
+  version: 1;
+  /** Number of segments (matches `segments.length`). */
+  segmentCount: number;
+  /** Normalized segments with start/end (seconds) and trimmed text. */
+  segments: { start: number; end: number; text: string }[];
+}
+
+/**
+ * Build a structured JSON object for the transcript: normalized segments with
+ * their start/end timestamps in seconds. Returns the object (not a string) so
+ * callers can choose their own indentation / serialization.
+ */
+export function toJsonObject(segments: Segment[]): JsonExport {
+  const norm = normalizeSegments(segments).map((s) => ({
+    start: s.start,
+    end: s.end,
+    text: s.text,
+  }));
+  return { version: 1, segmentCount: norm.length, segments: norm };
+}
+
+/** Serialize the JSON transcript export with 2-space indentation and a trailing newline. */
+export function toJson(segments: Segment[]): string {
+  return JSON.stringify(toJsonObject(segments), null, 2) + "\n";
+}
