@@ -74,9 +74,23 @@
               <button id="txt-btn" type="button">.txt</button>
               <button id="srt-btn" type="button">.srt</button>
               <button id="vtt-btn" type="button">.vtt</button>
+              <button id="json-btn" type="button">.json</button>
             </div>
           </div>
+          <div id="summary" class="summary" aria-live="polite"></div>
+          <div class="search-row">
+            <input
+              id="search-input"
+              class="search-input"
+              type="search"
+              placeholder="Search the transcript…"
+              aria-label="Search the transcript"
+              autocomplete="off"
+            />
+            <span id="search-count" class="search-count"></span>
+          </div>
           <ol id="segments" class="segments"></ol>
+          <p id="no-matches" class="no-matches hidden">No segments match your search.</p>
         </section>
       </main>
 

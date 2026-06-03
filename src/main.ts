@@ -2,10 +2,12 @@ import "./style.css";
 import { fileToWhisperPcm } from "./lib/audio.ts";
 import { LANGUAGES } from "./lib/languages.ts";
 import { MODELS, DEFAULT_MODEL, findModel } from "./lib/models.ts";
-import { toSrt, toVtt, toPlainText } from "./lib/subtitles.ts";
+import { toSrt, toVtt, toPlainText, toJson } from "./lib/subtitles.ts";
 import { formatClock } from "./lib/timecode.ts";
 import { activeSegmentIndex } from "./lib/transcript.ts";
 import { deriveDownloadName } from "./lib/filename.ts";
+import { computeStats, formatDuration } from "./lib/stats.ts";
+import { filterSegments } from "./lib/search.ts";
 import type { ModelId, Segment } from "./lib/types.ts";
 import type { WorkerRequest, WorkerResponse } from "./worker/protocol.ts";
 
@@ -33,6 +35,11 @@ const copyBtn = $<HTMLButtonElement>("copy-btn");
 const txtBtn = $<HTMLButtonElement>("txt-btn");
 const srtBtn = $<HTMLButtonElement>("srt-btn");
 const vttBtn = $<HTMLButtonElement>("vtt-btn");
+const jsonBtn = $<HTMLButtonElement>("json-btn");
+const summaryEl = $<HTMLElement>("summary");
+const searchInput = $<HTMLInputElement>("search-input");
+const searchCount = $<HTMLElement>("search-count");
+const noMatchesEl = $<HTMLElement>("no-matches");
 
 /* ----------------------------- App state ----------------------------- */
 let worker: Worker | null = null;
@@ -106,13 +113,44 @@ function toast(message: string) {
 }
 
 /* ----------------------------- Rendering ----------------------------- */
-function renderSegments(segments: Segment[]) {
-  currentSegments = segments;
+function renderSummary(segments: Segment[]) {
+  const stats = computeStats(segments);
+  if (stats.segmentCount === 0) {
+    summaryEl.replaceChildren();
+    return;
+  }
+  const langOpt = langSelect.options[langSelect.selectedIndex];
+  const langLabel = langOpt ? langOpt.textContent ?? "" : "";
+  const parts: [string, string][] = [
+    ["Words", String(stats.wordCount)],
+    ["Segments", String(stats.segmentCount)],
+    ["Duration", formatDuration(stats.durationSeconds)],
+    ["Language", langLabel],
+  ];
+  summaryEl.replaceChildren();
+  for (const [label, value] of parts) {
+    const stat = document.createElement("div");
+    stat.className = "stat";
+    const v = document.createElement("span");
+    v.className = "stat-value";
+    v.textContent = value;
+    const l = document.createElement("span");
+    l.className = "stat-label";
+    l.textContent = label;
+    stat.append(v, l);
+    summaryEl.append(stat);
+  }
+}
+
+/** Render the segment list, honouring the current search query. */
+function renderSegmentList() {
+  const matches = filterSegments(currentSegments, searchInput.value);
   segmentsEl.replaceChildren();
-  for (const seg of segments) {
+  for (const { index, segment: seg } of matches) {
     const li = document.createElement("li");
     li.className = "segment";
     li.dataset.start = String(seg.start);
+    li.dataset.index = String(index);
 
     const ts = document.createElement("span");
     ts.className = "ts";
@@ -122,7 +160,17 @@ function renderSegments(segments: Segment[]) {
     text.className = "seg-text";
     text.textContent = seg.text;
 
-    li.append(ts, text);
+    const copyOne = document.createElement("button");
+    copyOne.type = "button";
+    copyOne.className = "seg-copy";
+    copyOne.textContent = "Copy";
+    copyOne.title = "Copy this segment";
+    copyOne.addEventListener("click", (e) => {
+      e.stopPropagation();
+      void copyText(seg.text, "Segment copied");
+    });
+
+    li.append(ts, text, copyOne);
     li.addEventListener("click", () => {
       if (mediaEl) {
         mediaEl.currentTime = seg.start;
@@ -131,6 +179,22 @@ function renderSegments(segments: Segment[]) {
     });
     segmentsEl.append(li);
   }
+
+  const query = searchInput.value.trim();
+  if (query.length > 0) {
+    searchCount.textContent = `${matches.length} of ${currentSegments.length}`;
+    noMatchesEl.classList.toggle("hidden", matches.length > 0);
+  } else {
+    searchCount.textContent = "";
+    noMatchesEl.classList.add("hidden");
+  }
+  highlightActive();
+}
+
+function renderSegments(segments: Segment[]) {
+  currentSegments = segments;
+  renderSummary(segments);
+  renderSegmentList();
   if (segments.length > 0) show(resultsEl);
 }
 
@@ -138,14 +202,17 @@ function highlightActive() {
   if (!mediaEl) return;
   const idx = activeSegmentIndex(currentSegments, mediaEl.currentTime);
   const items = segmentsEl.children;
+  let activeEl: HTMLElement | undefined;
   for (let i = 0; i < items.length; i++) {
-    items[i].classList.toggle("active", i === idx);
+    const el = items[i] as HTMLElement;
+    const isActive = Number(el.dataset.index) === idx;
+    el.classList.toggle("active", isActive);
+    if (isActive) activeEl = el;
   }
-  if (idx >= 0) {
-    const active = items[idx] as HTMLElement | undefined;
-    active?.scrollIntoView({ block: "nearest" });
-  }
+  activeEl?.scrollIntoView({ block: "nearest" });
 }
+
+searchInput.addEventListener("input", renderSegmentList);
 
 function setupPlayer(file: File) {
   playerWrap.replaceChildren();
@@ -225,6 +292,10 @@ async function transcribeFile(file: File) {
   clearError();
   hide(resultsEl);
   currentSegments = [];
+  searchInput.value = "";
+  searchCount.textContent = "";
+  noMatchesEl.classList.add("hidden");
+  summaryEl.replaceChildren();
   segmentsEl.replaceChildren();
 
   currentFileName = file.name || "recording";
@@ -353,15 +424,18 @@ function download(content: string, filename: string, mime: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-copyBtn.addEventListener("click", async () => {
-  const text = toPlainText(currentSegments);
+async function copyText(text: string, okMessage: string) {
   try {
     await navigator.clipboard.writeText(text);
-    toast("Transcript copied");
+    toast(okMessage);
   } catch {
     toast("Copy failed — select and copy manually");
   }
-});
+}
+
+copyBtn.addEventListener("click", () =>
+  copyText(toPlainText(currentSegments), "Transcript copied"),
+);
 txtBtn.addEventListener("click", () =>
   download(toPlainText(currentSegments), deriveDownloadName(currentFileName, "txt"), "text/plain"),
 );
@@ -370,4 +444,7 @@ srtBtn.addEventListener("click", () =>
 );
 vttBtn.addEventListener("click", () =>
   download(toVtt(currentSegments), deriveDownloadName(currentFileName, "vtt"), "text/vtt"),
+);
+jsonBtn.addEventListener("click", () =>
+  download(toJson(currentSegments), deriveDownloadName(currentFileName, "json"), "application/json"),
 );
