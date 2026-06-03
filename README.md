@@ -3,7 +3,7 @@
 **In-browser speech-to-text and subtitles. 100% on-device · no upload · no API key · free.**
 
 Local Scribe turns audio and video into a timestamped transcript and exportable
-subtitles (**SRT / VTT / TXT**) — entirely in your browser. A
+subtitles (**SRT / VTT / TXT / JSON**) — entirely in your browser. A
 [Whisper](https://github.com/openai/whisper) model runs on **your** device via
 [transformers.js](https://github.com/huggingface/transformers.js) (WebGPU, with
 an automatic WASM fallback). Your media never leaves your machine.
@@ -57,8 +57,11 @@ Pick the model and language (or **Auto-detect**) in the UI before transcribing.
   decode.
 - Timestamped transcript; **click a segment to seek** the synced
   `<audio>`/`<video>` player; the **current segment highlights** during playback.
-- Export: **Copy text**, **.txt**, **.srt**, **.vtt** (correct indices,
-  timecodes, and blank lines — unit-tested).
+- **Summary panel**: word count, segment count, total duration, and language.
+- **Search / filter** the transcript (case-insensitive), with a match counter.
+- **Copy a single segment** with a per-row Copy button.
+- Export: **Copy text**, **.txt**, **.srt**, **.vtt**, **.json** (correct
+  indices, timecodes, and blank lines — unit-tested).
 - Clean, responsive, **dark-mode-friendly** hand-written CSS.
 - Graceful errors for unsupported files, decode failures, and model-load
   failures.
@@ -113,9 +116,10 @@ build works under any Pages subpath.
 
 ## Verification status (honest)
 
-- **Unit tests** cover all pure logic: SRT/VTT/text export, timecode formatting
-  (comma vs. dot ms, sub-second, > 1 h, rounding rollover), segment
-  normalization/overlap handling, 16 kHz resampling math + mono down-mix,
+- **Unit tests** cover all pure logic: SRT/VTT/text/JSON export, timecode
+  formatting (comma vs. dot ms, sub-second, > 1 h, rounding rollover), segment
+  normalization/overlap handling, transcript statistics (word/segment count,
+  duration), transcript search/filter, 16 kHz resampling math + mono down-mix,
   language-list integrity, model-list integrity, chunk→segment mapping, and
   filename derivation.
 - A **capped Node smoke test** (`npm run smoke`) loads `Xenova/whisper-tiny`
