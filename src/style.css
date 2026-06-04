@@ -444,6 +444,18 @@ button.recording {
   white-space: nowrap;
 }
 
+.replace-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.replace-row .search-input {
+  flex: 1 1 160px;
+}
+
 .no-matches {
   margin: 14px 0 0;
   color: var(--muted);
@@ -493,6 +505,20 @@ button.recording {
 
 .segment .seg-text {
   font-size: 15px;
+  cursor: text;
+  border-radius: 6px;
+  padding: 1px 4px;
+  margin: -1px -4px;
+}
+
+.segment .seg-text:hover {
+  background: var(--panel-2);
+}
+
+.segment .seg-text:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  background: var(--panel);
 }
 
 .seg-copy {

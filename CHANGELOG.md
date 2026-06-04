@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Load sample transcript.** A "Load sample transcript" button instantly loads
+  a small bundled demo transcript (timestamped English segments) so a first-time
+  visitor can try editing, search, find-and-replace, and every export without
+  recording audio or downloading the Whisper model.
+- **Editable transcript.** Click any segment's text to edit it inline; the edit
+  is committed on blur (or Enter). All exports (TXT/SRT/VTT/JSON) reflect the
+  edited text. Backed by a pure, immutable, unit-tested `applyEdit` helper.
+- **Find & Replace.** A find/replace box fixes recurring mis-transcriptions
+  across every segment at once, with an optional case-sensitive toggle and a
+  count of replacements made. Backed by a pure, unit-tested `findReplaceAll`
+  helper (literal matching, empty find is a no-op).
 - **Translate to English.** A new checkbox runs Whisper's `translate` task,
   turning non-English speech (e.g. Spanish or Russian audio) directly into
   English text. Timestamps and segments are preserved, so the `.srt`, `.vtt`,

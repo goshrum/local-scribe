@@ -10,7 +10,7 @@
     <title>Local Scribe — On-device speech to text & subtitles</title>
   </head>
   <body>
-    <div id="app">
+    <div id="app" data-testid="app-ready">
       <header class="topbar">
         <div class="brand">
           <span class="logo" aria-hidden="true">✎</span>
@@ -58,6 +58,12 @@
             <p class="dz-sub">or click to choose · MP3, WAV, M4A, MP4, WebM…</p>
             <div class="dz-actions">
               <button id="record-btn" type="button" class="secondary">● Record from microphone</button>
+              <button
+                id="sample-btn"
+                type="button"
+                class="secondary"
+                data-testid="load-sample"
+              >Load sample transcript</button>
             </div>
           </div>
         </section>
@@ -78,10 +84,10 @@
             <h2>Transcript</h2>
             <div class="export-buttons">
               <button id="copy-btn" type="button">Copy text</button>
-              <button id="txt-btn" type="button">.txt</button>
-              <button id="srt-btn" type="button">.srt</button>
-              <button id="vtt-btn" type="button">.vtt</button>
-              <button id="json-btn" type="button">.json</button>
+              <button id="txt-btn" type="button" data-testid="export-txt">.txt</button>
+              <button id="srt-btn" type="button" data-testid="export-srt">.srt</button>
+              <button id="vtt-btn" type="button" data-testid="export-vtt">.vtt</button>
+              <button id="json-btn" type="button" data-testid="export-json">.json</button>
             </div>
           </div>
           <div id="summary" class="summary" aria-live="polite"></div>
@@ -96,7 +102,35 @@
             />
             <span id="search-count" class="search-count"></span>
           </div>
-          <ol id="segments" class="segments"></ol>
+          <div class="replace-row">
+            <input
+              id="find-input"
+              class="search-input"
+              type="text"
+              placeholder="Find…"
+              aria-label="Find text in the transcript"
+              autocomplete="off"
+              data-testid="find-input"
+            />
+            <input
+              id="replace-input"
+              class="search-input"
+              type="text"
+              placeholder="Replace with…"
+              aria-label="Replacement text"
+              autocomplete="off"
+              data-testid="replace-input"
+            />
+            <label class="checkbox-field" for="case-checkbox">
+              <input id="case-checkbox" type="checkbox" />
+              <span>Case sensitive</span>
+            </label>
+            <button id="replace-btn" type="button" data-testid="replace-apply">
+              Replace all
+            </button>
+            <span id="replace-count" class="search-count" aria-live="polite"></span>
+          </div>
+          <ol id="segments" class="segments" data-testid="transcript"></ol>
           <p id="no-matches" class="no-matches hidden">No segments match your search.</p>
         </section>
       </main>

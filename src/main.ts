@@ -8,6 +8,8 @@ import { activeSegmentIndex } from "./lib/transcript.ts";
 import { deriveDownloadName } from "./lib/filename.ts";
 import { computeStats, formatDuration } from "./lib/stats.ts";
 import { filterSegments } from "./lib/search.ts";
+import { applyEdit, findReplaceAll } from "./lib/edit.ts";
+import { loadSampleSegments } from "./lib/sample.ts";
 import type { ModelId, Segment } from "./lib/types.ts";
 import { buildTranscribeRequest } from "./worker/protocol.ts";
 import type { WorkerResponse } from "./worker/protocol.ts";
@@ -26,6 +28,7 @@ const translateCheckbox = $<HTMLInputElement>("translate-checkbox");
 const dropzone = $<HTMLElement>("dropzone");
 const fileInput = $<HTMLInputElement>("file-input");
 const recordBtn = $<HTMLButtonElement>("record-btn");
+const sampleBtn = $<HTMLButtonElement>("sample-btn");
 const progressEl = $<HTMLElement>("progress");
 const statusText = $<HTMLElement>("status-text");
 const barFill = $<HTMLElement>("bar-fill");
@@ -42,6 +45,11 @@ const summaryEl = $<HTMLElement>("summary");
 const searchInput = $<HTMLInputElement>("search-input");
 const searchCount = $<HTMLElement>("search-count");
 const noMatchesEl = $<HTMLElement>("no-matches");
+const findInput = $<HTMLInputElement>("find-input");
+const replaceInput = $<HTMLInputElement>("replace-input");
+const caseCheckbox = $<HTMLInputElement>("case-checkbox");
+const replaceBtn = $<HTMLButtonElement>("replace-btn");
+const replaceCount = $<HTMLElement>("replace-count");
 
 /* ----------------------------- App state ----------------------------- */
 let worker: Worker | null = null;
@@ -163,6 +171,27 @@ function renderSegmentList() {
     const text = document.createElement("span");
     text.className = "seg-text";
     text.textContent = seg.text;
+    // Inline editing: click the text to edit it directly.
+    text.contentEditable = "true";
+    text.spellcheck = false;
+    text.dataset.testid = `segment-${index}`;
+    text.title = "Click to edit";
+    // Don't let clicks on the editable text trigger the row's seek handler.
+    text.addEventListener("click", (e) => e.stopPropagation());
+    // Enter commits and blurs (Shift+Enter still inserts a newline).
+    text.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        text.blur();
+      }
+    });
+    // Commit the edit on blur if the text actually changed.
+    text.addEventListener("blur", () => {
+      const newText = text.textContent ?? "";
+      if (newText === currentSegments[index]?.text) return;
+      currentSegments = applyEdit(currentSegments, index, newText);
+      renderSummary(currentSegments);
+    });
 
     const copyOne = document.createElement("button");
     copyOne.type = "button";
@@ -171,7 +200,7 @@ function renderSegmentList() {
     copyOne.title = "Copy this segment";
     copyOne.addEventListener("click", (e) => {
       e.stopPropagation();
-      void copyText(seg.text, "Segment copied");
+      void copyText(currentSegments[index]?.text ?? seg.text, "Segment copied");
     });
 
     li.append(ts, text, copyOne);
@@ -217,6 +246,43 @@ function highlightActive() {
 }
 
 searchInput.addEventListener("input", renderSegmentList);
+
+/* ----------------------------- Find & Replace ----------------------------- */
+function applyFindReplace() {
+  const find = findInput.value;
+  if (find.length === 0) {
+    replaceCount.textContent = "Enter text to find.";
+    return;
+  }
+  const { segments, count } = findReplaceAll(
+    currentSegments,
+    find,
+    replaceInput.value,
+    { caseSensitive: caseCheckbox.checked },
+  );
+  currentSegments = segments;
+  renderSummary(currentSegments);
+  renderSegmentList();
+  replaceCount.textContent =
+    count === 0
+      ? "No matches replaced."
+      : `Replaced ${count} ${count === 1 ? "match" : "matches"}.`;
+}
+replaceBtn.addEventListener("click", applyFindReplace);
+
+/* ----------------------------- Load sample transcript ----------------------------- */
+sampleBtn.addEventListener("click", () => {
+  if (busy) return;
+  clearError();
+  hide(progressEl);
+  currentFileName = "sample-transcript";
+  currentTranslated = false;
+  searchInput.value = "";
+  findInput.value = "";
+  replaceInput.value = "";
+  replaceCount.textContent = "";
+  renderSegments(loadSampleSegments());
+});
 
 function setupPlayer(file: File) {
   playerWrap.replaceChildren();
