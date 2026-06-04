@@ -9,7 +9,8 @@ import { deriveDownloadName } from "./lib/filename.ts";
 import { computeStats, formatDuration } from "./lib/stats.ts";
 import { filterSegments } from "./lib/search.ts";
 import type { ModelId, Segment } from "./lib/types.ts";
-import type { WorkerRequest, WorkerResponse } from "./worker/protocol.ts";
+import { buildTranscribeRequest } from "./worker/protocol.ts";
+import type { WorkerResponse } from "./worker/protocol.ts";
 
 /* ----------------------------- DOM helpers ----------------------------- */
 function $<T extends HTMLElement>(id: string): T {
@@ -21,6 +22,7 @@ function $<T extends HTMLElement>(id: string): T {
 const modelSelect = $<HTMLSelectElement>("model-select");
 const modelNote = $<HTMLElement>("model-note");
 const langSelect = $<HTMLSelectElement>("lang-select");
+const translateCheckbox = $<HTMLInputElement>("translate-checkbox");
 const dropzone = $<HTMLElement>("dropzone");
 const fileInput = $<HTMLInputElement>("file-input");
 const recordBtn = $<HTMLButtonElement>("record-btn");
@@ -47,6 +49,8 @@ let currentSegments: Segment[] = [];
 let currentFileName = "transcript";
 let mediaEl: HTMLMediaElement | null = null;
 let busy = false;
+/** Whether the current/last run used the translate-to-English task. */
+let currentTranslated = false;
 
 /* ----------------------------- Populate selectors ----------------------------- */
 for (const m of MODELS) {
@@ -125,7 +129,7 @@ function renderSummary(segments: Segment[]) {
     ["Words", String(stats.wordCount)],
     ["Segments", String(stats.segmentCount)],
     ["Duration", formatDuration(stats.durationSeconds)],
-    ["Language", langLabel],
+    [currentTranslated ? "Mode" : "Language", currentTranslated ? "Translated to English" : langLabel],
   ];
   summaryEl.replaceChildren();
   for (const [label, value] of parts) {
@@ -299,6 +303,7 @@ async function transcribeFile(file: File) {
   segmentsEl.replaceChildren();
 
   currentFileName = file.name || "recording";
+  currentTranslated = translateCheckbox.checked;
   setupPlayer(file);
 
   show(progressEl);
@@ -314,14 +319,13 @@ async function transcribeFile(file: File) {
     return;
   }
 
-  setStatus("Preparing model…");
+  setStatus(currentTranslated ? "Preparing model (translate to English)…" : "Preparing model…");
   const w = getWorker();
-  const req: WorkerRequest = {
-    type: "transcribe",
-    audio: pcm,
+  const req = buildTranscribeRequest(pcm, {
     model: modelSelect.value as ModelId,
     language: langSelect.value === "" ? null : langSelect.value,
-  };
+    translate: translateCheckbox.checked,
+  });
   // Transfer the PCM buffer to avoid a copy.
   w.postMessage(req, [pcm.buffer]);
 }

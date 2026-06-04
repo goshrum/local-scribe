@@ -145,7 +145,7 @@ async function handleTranscribe(req: Extract<WorkerRequest, { type: "transcribe"
     stride_length_s: 5,
     return_timestamps: true,
     language: req.language ?? undefined,
-    task: "transcribe",
+    task: req.task,
     streamer,
   })) as AsrResult;
 
