@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Translate to English.** A new checkbox runs Whisper's `translate` task,
+  turning non-English speech (e.g. Spanish or Russian audio) directly into
+  English text. Timestamps and segments are preserved, so the `.srt`, `.vtt`,
+  and `.json` exports continue to work. The summary panel shows
+  "Translated to English" when the toggle is active. The worker protocol message
+  now carries a `task` field (`transcribe` | `translate`).
 - **JSON export.** Download the transcript as structured JSON (versioned schema
   with `segments` carrying `start`/`end` timestamps in seconds and `text`),
   alongside the existing `.txt`, `.srt`, and `.vtt` exports.

@@ -53,6 +53,9 @@ Pick the model and language (or **Auto-detect**) in the UI before transcribing.
 - **Record from microphone** (MediaRecorder).
 - **Language selector** (auto-detect + manual, incl. Russian / English) and
   **model-size selector**.
+- **Translate to English** toggle: runs Whisper's `translate` task so
+  non-English speech is transcribed straight into English subtitles
+  (timestamps and exports preserved).
 - One-time **model-download progress bar**; **streaming partial results** during
   decode.
 - Timestamped transcript; **click a segment to seek** the synced
